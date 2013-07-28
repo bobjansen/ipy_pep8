@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from optparse import OptionParser
 
 
 TEMPLATE_IPYTHON_PRELUDE = """import numpy as np
@@ -38,45 +39,75 @@ def read_code_from_notebook(notebook):
         return cells
 
 
-def check_code(cells):
+def check_code(cells, options):
     """
     Check the code in the cells
     """
     temp = tempfile.NamedTemporaryFile()
-    try:
-        # Gather all code in a temp file together with a pylab prelude
-        temp.write(TEMPLATE_IPYTHON_PRELUDE)
-        for cell in cells:
-            temp.write("".join(cell))
 
-        process = subprocess.Popen(['pep8', temp.name],
-                                   stdout=subprocess.PIPE)
-        result, _ = process.communicate()
-        print result
-        if result == "":
-            success = True
-        else:
-            success = False
+    try:
+        if options.filename is not None:
+            handle = open(options.filename, 'w')
+
+        code = ""
+        try:
+            # Gather all code in a temp file together with a pylab prelude
+            code = TEMPLATE_IPYTHON_PRELUDE
+            for cell in cells:
+                code += "".join(cell) + "\n\n\n"
+            temp.write(code)
+            temp.flush()
+            if options.filename is not None and handle:
+                handle.write(code)
+
+            process = subprocess.Popen(['pep8', temp.name],
+                                       stdout=subprocess.PIPE)
+            result, _ = process.communicate()
+            print result
+            if result == "":
+                success = True
+            else:
+                success = False
+        finally:
+            temp.close()
     finally:
-        temp.close()
+        if options.filename is not None and handle:
+            handle.close()
 
     return success
 
 
-def check_files(start_directory):
+def check_files(start_directory, options):
     """
     Checks all files under start directory.
     """
+    failfast = options.failfast
+
+    success = True
     notebooks = find_notebooks(start_directory)
     for notebook in notebooks:
         cells = read_code_from_notebook(notebook)
-        success = check_code(cells)
-        if not success:
+        success = check_code(cells, options)
+        if failfast and not success:
             break
+    return success
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        ROOT = "."
+    PARSER = OptionParser()
+    PARSER.add_option("-o", "--output", dest="filename",
+                      help="write combined python code to FILE",
+                      metavar="FILE")
+    PARSER.add_option("-f", "--fail-fast", dest="failfast", default=False,
+                      action="store_true",
+                      help="fail when the first notebook with an error\
+                              is encountered")
+    (OPTION, ARGS) = PARSER.parse_args()
+
+    if len(ARGS) == 0:
+        SUCCESSES = list(check_files(".", OPTION))
     else:
-        ROOT = sys.argv[1]
-    check_files(ROOT)
+        SUCCESSES = [check_files(arg, OPTION) for arg in ARGS]
+    if reduce(lambda x, y: x and y, SUCCESSES):
+        exit(0)
+    else:
+        exit(1)
