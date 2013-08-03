@@ -32,9 +32,13 @@ def read_code_from_notebook(notebook):
     with open(notebook, 'r') as handle:
         text = handle.read()
         data = json.loads(text)
-        cells = (cell['input']
-                 for cell in data['worksheets'][0]['cells']
-                 if cell['cell_type'] == u'code')
+        try:
+            cells = (cell['input']
+                     for cell in data['worksheets'][0]['cells']
+                     if cell['cell_type'] == u'code')
+        except IndexError:
+            print notebook, "is not a valid notebook."
+            cells = None
 
         return cells
 
@@ -55,14 +59,20 @@ def check_code(cells, options):
             code = TEMPLATE_IPYTHON_PRELUDE
             for cell in cells:
                 code += "".join(cell) + "\n\n\n"
+
             temp.write(code)
             temp.flush()
             if options.filename is not None and handle:
                 handle.write(code)
 
-            process = subprocess.Popen(['pep8', temp.name],
-                                       stdout=subprocess.PIPE)
-            result, _ = process.communicate()
+            try:
+                process = subprocess.Popen(['pep8', temp.name],
+                                           stdout=subprocess.PIPE)
+                result, _ = process.communicate()
+            except OSError:
+                print "Error: Is pep8 available?"
+                exit()
+
             print result
             if result == "":
                 success = True
@@ -87,9 +97,10 @@ def check_files(start_directory, options):
     notebooks = find_notebooks(start_directory)
     for notebook in notebooks:
         cells = read_code_from_notebook(notebook)
-        success = check_code(cells, options)
-        if failfast and not success:
-            break
+        if cells is not None:
+            success = check_code(cells, options)
+            if failfast and not success:
+                break
     return success
 
 if __name__ == "__main__":
