@@ -1,20 +1,16 @@
 ipy_pep8
 ========
 
-Simple tool to check PEP8 violations in a IPython notebook
+Simple tool to check PEP8 violations in a IPython notebook and fix them
 
 Example Usage
 =============
 
 Normally I run
 
-    python pep8_check.pyc -f -o test.py ~/notebooks
+    python pep8_check.pyc -f --autopep8 ~/notebooks
 
-to check all notebooks in the ~/notebooks dir. Saving the generated
-output to e.g. test.py can be useful to inspect the checked code in
-your own editor instead of the notebook itself. So the line numbers
-given by pep8 actually make sense.
-
+to check and fix all notebooks in the ~/notebooks dir.
 
 Ideas
 =====
