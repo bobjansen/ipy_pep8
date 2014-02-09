@@ -33,14 +33,17 @@ def read_notebook(notebook):
         # The second parameter enables preserving the order of the JSON fields
         # to minimize changes in the file
     return data
-    
+
 def get_code_cells(notebook_data, notebook_name='This notebook'):
+    """
+    Get code cells from notebook.
+    """
     try:
         return ((cell_num, cell['input']) for cell_num, cell
                 in enumerate(notebook_data['worksheets'][0]['cells'])
                 if cell['cell_type'] == u'code')
     except IndexError:
-        print("%s is not a valid notebook." % (notebook, ))
+        print("%s is not a valid notebook." % (notebook_name, ))
         return []
 
 
@@ -49,7 +52,7 @@ def check_code(cells):
     Check the code in the cells with pep8, returning True iff there are no errors.
     """
     style = pep8.StyleGuide(parse_argv=False, config_file=True)
-    
+
     num_errors = 0
 
     for cell_num, cell_lines in cells:
@@ -78,13 +81,19 @@ def fix_code(cells, options):
 
 
 def update_code_cells(notebook_data, code_cells):
+    """
+    Update the code cells.
+    """
     for cell_num, cell_lines in code_cells:
         notebook_data['worksheets'][0]['cells'][cell_num]['input'] = cell_lines
 
 
 def write_notebook(notebook, data):
+    """
+    Write the notebook.
+    """
     with open(notebook, 'w') as handle:
-            data = json.dump(data, handle, indent=1, separators=(',', ': '))
+        json.dump(data, handle, indent=1, separators=(',', ': '))
 
 
 def process_files(start_directory, options):
@@ -94,7 +103,7 @@ def process_files(start_directory, options):
     failfast = options.failfast
 
     results = []
-    
+
     notebooks = find_notebooks(start_directory)
     for notebook in notebooks:
         print('Processing notebook %s' % (notebook,))
@@ -133,3 +142,4 @@ if __name__ == "__main__":
         exit(0)
     else:
         exit(1)
+
