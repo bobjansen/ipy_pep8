@@ -80,7 +80,7 @@ def fix_code(cells, options):
             # each cell.
             fixed_lines[-1] = fixed_lines[-1][:-1]
             
-            if options.end_semicolon:
+            if options.end_semicolon and not fixed_lines[-1].endswith('?'):
                 fixed_lines[-1] += ';'
         
         fixed_cells.append((cell_num, fixed_lines))
