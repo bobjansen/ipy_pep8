@@ -68,12 +68,22 @@ def fix_code(cells, options):
     """
     Returns code lines fixed with autopep8.
     """
-    options = '- ' + options
-    options, args = autopep8.parse_args(options.split())
+    autopep8_cmdline = '- ' + options.autopep8_options # Required filename arg
+    autopep8_options, autopep8_args = autopep8.parse_args(autopep8_cmdline.split())
     fixed_cells = []
     for cell_num, cell_lines in cells:
-        fixed_code = autopep8.fix_lines(cell_lines, options)
-        fixed_cells.append((cell_num, fixed_code.splitlines(True)))
+        fixed_code = autopep8.fix_lines(cell_lines, autopep8_options)
+        fixed_lines = fixed_code.splitlines(True)
+        
+        if options.no_newline and fixed_lines:
+            # Remove the single newline at end of 'file' added by autopep8 to
+            # each cell.
+            fixed_lines[-1] = fixed_lines[-1][:-1]
+            
+            if options.end_semicolon:
+                fixed_lines[-1] += ';'
+        
+        fixed_cells.append((cell_num, fixed_lines))
     return fixed_cells
 
 
@@ -103,7 +113,7 @@ def process_files(start_directory, options):
         if not options.autopep8:
             result = check_code(code_cells)
         else:
-            fixed_code_cells = fix_code(code_cells, options.autopep8_args)
+            fixed_code_cells = fix_code(code_cells, options)
             update_code_cells(notebook_data, fixed_code_cells)
             write_notebook(notebook, notebook_data)
             result = True # Everything's fixed automatically
@@ -117,9 +127,16 @@ if __name__ == "__main__":
     PARSER.add_option("-a", "--autopep8", action="store_true",
                       help="fix notebooks in-place with autopep8")
     PARSER.add_option("-f", "--fail-fast", dest="failfast", action="store_true",
-                      help="fail when the first notebook with an error is"
+                      help="fail when the first notebook with an error is "
                            "encountered")
-    PARSER.add_option('--autopep8-args', dest='autopep8_args', action='store',
+    PARSER.add_option("-n", "--no-newline", dest="no_newline", action="store_true",
+                      help="Leave no newline at end of cell when running -a. "
+                            "This assumes W292 isn't ignored.")
+    PARSER.add_option("--end-semicolon", dest="end_semicolon", action="store_true",
+                      help="Add a semicolon at the end of each code cell. "
+                            "This assumes E703 isn't ignored and applies only "
+                            "if -n is chosen.")
+    PARSER.add_option('--autopep8-options', dest='autopep8_options', action='store',
                       type='string', default='--ignore=E501',
                       help="(in quotes) passed to autopep8. "
                            "pep8 arguments can be passed via its config file.")
