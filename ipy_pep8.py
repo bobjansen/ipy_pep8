@@ -1,5 +1,5 @@
 """
-Helper utility to PEP8 check Python code in IPython notebooks.
+Helper utility to PEP8 check and fix Python code in IPython notebooks.
 """
 import json
 import collections
@@ -77,15 +77,15 @@ def fix_code(cells, options):
     for cell_num, cell_lines in cells:
         fixed_code = autopep8.fix_lines(cell_lines, autopep8_options)
         fixed_lines = fixed_code.splitlines(True)
-        
+
         if options.no_newline and fixed_lines:
             # Remove the single newline at end of 'file' added by autopep8 to
             # each cell.
             fixed_lines[-1] = fixed_lines[-1][:-1]
-            
+
             if options.end_semicolon and not fixed_lines[-1].endswith('?'):
                 fixed_lines[-1] += ';'
-        
+
         fixed_cells.append((cell_num, fixed_lines))
     return fixed_cells
 
