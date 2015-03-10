@@ -8,7 +8,7 @@ Example Usage
 
 Normally I run
 
-    python pep8_check.pyc -f --autopep8 ~/notebooks
+    python ipy_pep8.py -f --autopep8 ~/notebooks
 
 to check and fix all notebooks in the ~/notebooks dir.
 
