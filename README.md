@@ -1,7 +1,9 @@
 ipy_pep8
 ========
 
-Simple tool to check PEP8 violations in a IPython notebook and fix them
+Simple tool to check PEP8 violations in a IPython notebook and fix them.
+
+The current version of ipy_pep8 has support for nbformats 3 and 4.
 
 Example Usage
 =============

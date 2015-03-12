@@ -29,9 +29,12 @@ def read_notebook(notebook):
     Read the source code in a IPython notebook.
     """
     with open(notebook, 'r') as handle:
-        data = json.load(handle, object_pairs_hook=collections.OrderedDict)
         # The second parameter enables preserving the order of the JSON fields
         # to minimize changes in the file
+        data = json.load(handle, object_pairs_hook=collections.OrderedDict)
+        if data[u"nbformat"] not in (3, 4):
+            raise NotImplementedError("Only nbformats 3 and 4 are supported.")
+
     return data
 
 def get_code_cells(notebook_data, notebook_name='This notebook'):
@@ -39,12 +42,25 @@ def get_code_cells(notebook_data, notebook_name='This notebook'):
     Get code cells from notebook.
     """
     try:
-        return ((cell_num, cell['input']) for cell_num, cell
-                in enumerate(notebook_data['worksheets'][0]['cells'])
-                if cell['cell_type'] == u'code')
+        # Refactoring this might be a good idea but only 2 cases now...
+        if notebook_data[u"nbformat"] == 4:
+            code_cells = ((cell_num, cell['source']) for cell_num, cell
+                          in enumerate(notebook_data['cells'])
+                          if cell['cell_type'] == u'code')
+        elif notebook_data[u"nbformat"] == 3:
+            code_cells = ((cell_num, cell['input']) for cell_num, cell
+                          in enumerate(notebook_data['worksheets'][0]['cells'])
+                          if cell['cell_type'] == u'code')
+        else:
+            # This shouldn't happen in normal usage but could happen if
+            # ipy_pep8 is used as a library.
+            raise NotImplementedError("Only nbformats 3 and 4 are supported")
+        return code_cells
     except IndexError:
         print("%s is not a valid notebook." % (notebook_name, ))
         return []
+    except NotImplementedError:
+        raise
 
 
 def check_code(cells):
@@ -94,9 +110,19 @@ def update_code_cells(notebook_data, code_cells):
     """
     Update the code cells.
     """
-    for cell_num, cell_lines in code_cells:
-        notebook_data['worksheets'][0]['cells'][cell_num]['input'] = cell_lines
+    # The root of the cells is different between versions.
+    if notebook_data[u"nbformat"] == 4:
+        cells = notebook_data['cells']
+        source_key = 'source'
+    elif notebook_data[u"nbformat"] == 3:
+        cells = notebook_data['worksheets'][0]['cells']
+        source_key = 'input'
+    else:
+        raise NotImplementedError("Only nbformats 3 and 4 are supported.")
 
+    # Update the source cells.
+    for cell_num, cell_lines in code_cells:
+        cells[cell_num][source_key] = cell_lines
 
 def write_notebook(notebook, data):
     """
@@ -117,18 +143,23 @@ def process_files(start_directory, options):
     notebooks = find_notebooks(start_directory)
     for notebook in notebooks:
         print('Processing notebook %s' % (notebook,))
-        notebook_data = read_notebook(notebook)
-        code_cells = get_code_cells(notebook_data)
-        if not options.autopep8:
-            result = check_code(code_cells)
-        else:
-            fixed_code_cells = fix_code(code_cells, options)
-            update_code_cells(notebook_data, fixed_code_cells)
-            write_notebook(notebook, notebook_data)
-            result = True # Everything's fixed automatically
-        results.append(result)
-        if failfast and not result:
-            break
+        try:
+            notebook_data = read_notebook(notebook)
+            code_cells = get_code_cells(notebook_data)
+            if not options.autopep8:
+                result = check_code(code_cells)
+            else:
+                fixed_code_cells = fix_code(code_cells, options)
+                update_code_cells(notebook_data, fixed_code_cells)
+                write_notebook(notebook, notebook_data)
+                result = True # Everything's fixed automatically
+            results.append(result)
+            if failfast and not result:
+                break
+        except NotImplementedError as err:
+            print "Notebook not supported", err
+            print ("Note that IPython versions and format versions do not "
+                "necessarily match.\n")
     return results
 
 if __name__ == "__main__":
