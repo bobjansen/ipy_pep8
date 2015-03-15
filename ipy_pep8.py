@@ -129,7 +129,9 @@ def write_notebook(notebook, data):
     Write the notebook.
     """
     with open(notebook, 'w') as handle:
-        json.dump(data, handle, indent=1, separators=(',', ': '))
+        json.dump(data, handle, indent=1, separators=(',', ': '),
+                  ensure_ascii=False)
+        handle.write("\n")
 
 
 def process_files(start_directory, options):
