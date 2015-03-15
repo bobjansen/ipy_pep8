@@ -6,6 +6,8 @@ import collections
 import os
 import pep8
 import autopep8
+import codecs
+import encodings
 from optparse import OptionParser
 
 
@@ -24,11 +26,11 @@ def find_notebooks(start_directory, extension="ipynb"):
     return notebooks
 
 
-def read_notebook(notebook):
+def read_notebook(notebook, encoding="utf-8"):
     """
     Read the source code in a IPython notebook.
     """
-    with open(notebook, 'r') as handle:
+    with codecs.open(notebook, 'r', encoding=encoding) as handle:
         # The second parameter enables preserving the order of the JSON fields
         # to minimize changes in the file
         data = json.load(handle, object_pairs_hook=collections.OrderedDict)
@@ -124,11 +126,11 @@ def update_code_cells(notebook_data, code_cells):
     for cell_num, cell_lines in code_cells:
         cells[cell_num][source_key] = cell_lines
 
-def write_notebook(notebook, data):
+def write_notebook(notebook, data, encoding="utf-8"):
     """
     Write the notebook.
     """
-    with open(notebook, 'w') as handle:
+    with codecs.open(notebook, 'w', encoding=encoding) as handle:
         json.dump(data, handle, indent=1, separators=(',', ': '),
                   ensure_ascii=False)
         handle.write("\n")
@@ -146,14 +148,14 @@ def process_files(start_directory, options):
     for notebook in notebooks:
         print('Processing notebook %s' % (notebook,))
         try:
-            notebook_data = read_notebook(notebook)
+            notebook_data = read_notebook(notebook, options.encoding)
             code_cells = get_code_cells(notebook_data)
             if not options.autopep8:
                 result = check_code(code_cells)
             else:
                 fixed_code_cells = fix_code(code_cells, options)
                 update_code_cells(notebook_data, fixed_code_cells)
-                write_notebook(notebook, notebook_data)
+                write_notebook(notebook, notebook_data, options.encoding)
                 result = True # Everything's fixed automatically
             results.append(result)
             if failfast and not result:
@@ -182,7 +184,21 @@ if __name__ == "__main__":
                       type='string', default='--ignore=E501',
                       help="(in quotes) passed to autopep8. "
                            "pep8 arguments can be passed via its config file.")
+    PARSER.add_option('-e', '--encoding', dest='encoding', action='store',
+                      type="string", default="utf-8",
+                      help="Specifies the encoding of the original files."
+                           "The encoding will be preserved")
     (OPTIONS, ARGS) = PARSER.parse_args()
+
+    encoding = OPTIONS.encoding
+
+    if encodings.search_function(encoding) is None:
+        if encoding.startswith("-"):
+            print "error: --encoding option requires an argument"
+            exit(1)
+        else:
+            print "Specified encoding not found"
+            exit(1)
 
     if len(ARGS) == 0:
         SUCCESSES = process_files(".", OPTIONS)
