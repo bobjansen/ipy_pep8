@@ -10,11 +10,13 @@ Example Usage
 
 Normally I run
 
-    python ipy_pep8.py -f --autopep8 ~/notebooks
+    python ipy_pep8.py -f --now-newline --autopep8 ~/notebooks
 
 to check and fix all notebooks in the ~/notebooks dir.
 
-Ideas
+TODO
 =====
 
-Add interactive editing of flagged code on a chunk basis.
+ - Add support for Python 3
+ - Add a help text on command line usage
+ - Tests!
